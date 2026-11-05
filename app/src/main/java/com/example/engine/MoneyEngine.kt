@@ -76,7 +76,7 @@ object MoneyEngine {
     }
 
     /**
-     * Formats net balance as verbatim copy required by PDF:
+     * Formats net balance status copy:
      * - You are owed PKR 250.00
      * - You owe PKR 450.00
      * - You are all settled up

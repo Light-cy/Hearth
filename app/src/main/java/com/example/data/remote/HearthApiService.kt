@@ -7,7 +7,32 @@ import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Query
 
-// DTOs matching docs/CONTRACT.md
+data class LoginRequest(
+    val email: String,
+    val password: String
+)
+
+data class RegisterRequest(
+    val name: String,
+    val email: String,
+    val password: String,
+    val invite_code: String? = null
+)
+
+data class AuthUserDto(
+    val id: String,
+    val name: String,
+    val email: String,
+    val role: String = "member"
+)
+
+data class AuthResponse(
+    val user: AuthUserDto,
+    val access_token: String,
+    val refresh_token: String? = null,
+    val expires_in: Int? = null
+)
+
 data class ApiMemberDto(
     val id: String,
     val name: String
@@ -126,7 +151,13 @@ data class ApiHealthResponse(
     val db: String? = null
 )
 
-interface HisaabApiService {
+interface HearthApiService {
+
+    @POST("api/auth/login")
+    suspend fun login(@Body request: LoginRequest): Response<AuthResponse>
+
+    @POST("api/auth/register")
+    suspend fun register(@Body request: RegisterRequest): Response<AuthResponse>
 
     @GET("api/members")
     suspend fun getMembers(): Response<List<ApiMemberDto>>

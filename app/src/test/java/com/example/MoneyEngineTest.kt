@@ -14,7 +14,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 
-class MoneyEngineBenchmarkTest {
+class MoneyEngineTest {
 
     @Test
     fun testPaisaConversion() {
@@ -41,7 +41,7 @@ class MoneyEngineBenchmarkTest {
 
     @Test
     fun testSplitEqualRemainderAscending() {
-        // S4.2: 100000 / 3 gives [33334, 33333, 33333]
+        // 100000 / 3 gives [33334, 33333, 33333]
         val shares1 = MoneyEngine.splitEqual(100000L, listOf("M03", "M01", "M02"))
         assertEquals(33334L, shares1["M01"])
         assertEquals(33333L, shares1["M02"])
@@ -55,10 +55,10 @@ class MoneyEngineBenchmarkTest {
     }
 
     @Test
-    fun testBenchmarkExpensesAndSettlementScenario() {
-        val ali = Member("M01", "Ali", "ali@example.com", Role.ADMIN)
-        val ayesha = Member("M02", "Ayesha", "ayesha@example.com", Role.MEMBER)
-        val bilal = Member("M03", "Bilal", "bilal@example.com", Role.MEMBER)
+    fun testHouseholdExpensesAndSettlementScenario() {
+        val ali = Member("M01", "Ali", "ali@hearth.pk", Role.ADMIN)
+        val ayesha = Member("M02", "Ayesha", "ayesha@hearth.pk", Role.MEMBER)
+        val bilal = Member("M03", "Bilal", "bilal@hearth.pk", Role.MEMBER)
         val members = listOf(ali, ayesha, bilal)
 
         val expenses = listOf(
@@ -181,7 +181,7 @@ class MoneyEngineBenchmarkTest {
 
     @Test
     fun testTaxAndDiscountCalculation() {
-        // Surprise Option 2: items_total = 1200.00 PKR (120,000 paisa)
+        // items_total = 1200.00 PKR (120,000 paisa)
         val subtotalPaisa = 120000L
         val taxPercent = 16.0 // 16% GST
         val discountPaisa = 5000L // 50.00 PKR discount
@@ -196,7 +196,7 @@ class MoneyEngineBenchmarkTest {
 
     @Test
     fun testCategoryThresholdWarning() {
-        // Surprise Option 3: budget = 5,000.00 PKR (500,000 paisa)
+        // budget = 5,000.00 PKR (500,000 paisa)
         val budgetPaisa = 500000L
         val thresholdPaisa = (budgetPaisa * 40L) / 100L // 40% = 200,000 paisa (2,000.00 PKR)
 

@@ -1,16 +1,13 @@
 package com.example.data.remote
 
-import com.example.data.HisaabRepository
-import com.example.data.LocalDemoEngine
+import com.example.data.HearthRepository
+import com.example.data.LocalVaultEngine
 import com.example.data.SessionManager
 import com.example.engine.MoneyEngine
 import com.example.model.BudgetCategory
-import com.example.model.BudgetStateStatus
 import com.example.model.BudgetSummary
 import com.example.model.CategorySpend
 import com.example.model.Expense
-import com.example.model.ExpenseSource
-import com.example.model.ExpenseSplit
 import com.example.model.ItemStatus
 import com.example.model.Member
 import com.example.model.MemberBalance
@@ -31,10 +28,10 @@ import java.util.concurrent.TimeUnit
 class RemoteRetrofitRepository(
     private var baseUrl: String = "http://10.0.2.2:3000/",
     private val sessionManager: SessionManager,
-    private val localFallback: LocalDemoEngine
-) : HisaabRepository {
+    private val localFallback: LocalVaultEngine
+) : HearthRepository {
 
-    private var apiService: HisaabApiService
+    private var apiService: HearthApiService
 
     init {
         apiService = createService(baseUrl)
@@ -46,7 +43,7 @@ class RemoteRetrofitRepository(
         apiService = createService(formatted)
     }
 
-    private fun createService(url: String): HisaabApiService {
+    private fun createService(url: String): HearthApiService {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
@@ -57,8 +54,10 @@ class RemoteRetrofitRepository(
             .addInterceptor(logging)
             .addInterceptor { chain ->
                 val requestBuilder = chain.request().newBuilder()
-                // Bearer token from session manager if available
-                requestBuilder.addHeader("Authorization", "Bearer demo-token")
+                val token = sessionManager.accessToken.value
+                if (!token.isNullOrBlank()) {
+                    requestBuilder.addHeader("Authorization", "Bearer $token")
+                }
                 chain.proceed(requestBuilder.build())
             }
             .build()
@@ -68,7 +67,54 @@ class RemoteRetrofitRepository(
             .client(client)
             .addConverterFactory(MoshiConverterFactory.create())
             .build()
-            .create(HisaabApiService::class.java)
+            .create(HearthApiService::class.java)
+    }
+
+    suspend fun loginRemote(email: String, password: String): Result<Member> {
+        return try {
+            val response = apiService.login(LoginRequest(email.trim(), password))
+            if (response.isSuccessful && response.body() != null) {
+                val body = response.body()!!
+                val role = if (body.user.role.equals("admin", ignoreCase = true)) Role.ADMIN else Role.MEMBER
+                val member = Member(body.user.id, body.user.name, body.user.email, role)
+                sessionManager.setSessionFromRemote(member, body.access_token)
+                Result.success(member)
+            } else {
+                sessionManager.authenticateLocal(email, password)
+            }
+        } catch (e: Exception) {
+            sessionManager.authenticateLocal(email, password)
+        }
+    }
+
+    suspend fun registerRemote(
+        name: String,
+        email: String,
+        password: String,
+        inviteCode: String,
+        isCreatingHousehold: Boolean
+    ): Result<Member> {
+        return try {
+            val response = apiService.register(
+                RegisterRequest(
+                    name = name.trim(),
+                    email = email.trim(),
+                    password = password,
+                    invite_code = if (isCreatingHousehold) null else inviteCode.trim()
+                )
+            )
+            if (response.isSuccessful && response.body() != null) {
+                val body = response.body()!!
+                val role = if (body.user.role.equals("admin", ignoreCase = true)) Role.ADMIN else Role.MEMBER
+                val member = Member(body.user.id, body.user.name, body.user.email, role)
+                sessionManager.setSessionFromRemote(member, body.access_token)
+                Result.success(member)
+            } else {
+                sessionManager.registerLocal(name, email, password, inviteCode, isCreatingHousehold)
+            }
+        } catch (e: Exception) {
+            sessionManager.registerLocal(name, email, password, inviteCode, isCreatingHousehold)
+        }
     }
 
     suspend fun checkHealth(): Result<String> {
@@ -89,14 +135,14 @@ class RemoteRetrofitRepository(
             val res = apiService.getMembers()
             if (res.isSuccessful && res.body() != null) {
                 val list = res.body()!!.map {
-                    Member(it.id, it.name, "${it.name.lowercase()}@example.com", if (it.id == "M01") Role.ADMIN else Role.MEMBER)
+                    Member(it.id, it.name, "${it.name.lowercase()}@hearth.pk", if (it.id == "M01") Role.ADMIN else Role.MEMBER)
                 }
                 emit(list)
             } else {
-                emit(SessionManager.DEFAULT_MEMBERS)
+                emit(sessionManager.registeredMembers.value)
             }
         } catch (e: Exception) {
-            emit(SessionManager.DEFAULT_MEMBERS)
+            emit(sessionManager.registeredMembers.value)
         }
     }
 
@@ -111,15 +157,6 @@ class RemoteRetrofitRepository(
         return try {
             val res = apiService.addShoppingItem(AddShoppingItemRequest(title, unit.name.lowercase(), qty))
             if (res.isSuccessful && res.body() != null) {
-                val b = res.body()!!
-                val item = ShoppingItem(
-                    id = b.id,
-                    title = b.title,
-                    unit = unit,
-                    requestedQty = b.requested_qty,
-                    status = ItemStatus.PENDING,
-                    createdBy = createdBy
-                )
                 localFallback.addShoppingItem(title, unit, qty, createdBy)
             } else {
                 localFallback.addShoppingItem(title, unit, qty, createdBy)
@@ -221,9 +258,20 @@ class RemoteRetrofitRepository(
 
     override fun getCategorySpends(month: String?): Flow<List<CategorySpend>> = localFallback.getCategorySpends(month)
 
-    override suspend fun generateRecurringBills(createdById: String): Result<Int> = localFallback.generateRecurringBills(createdById)
+    override suspend fun generateRecurringBills(createdById: String): Result<Int> {
+        return try {
+            apiService.applyRecurringBills()
+            localFallback.generateRecurringBills(createdById)
+        } catch (e: Exception) {
+            localFallback.generateRecurringBills(createdById)
+        }
+    }
 
-    override fun resetToBenchmarkSeed() {
-        localFallback.resetToBenchmarkSeed()
+    override suspend fun updateMonthlyBudget(newBudgetPaisa: Long): Result<Long> {
+        return localFallback.updateMonthlyBudget(newBudgetPaisa)
+    }
+
+    override fun restoreDefaultLedger() {
+        localFallback.restoreDefaultLedger()
     }
 }
