@@ -697,7 +697,7 @@ fun ShoppingScreen(
 
                         LoadingButton(
                             text = "Add to Shared Shopping List",
-                            onClick = submitAction,
+                            onClick = { submitAction() },
                             isLoading = isSubmitting,
                             modifier = Modifier.fillMaxWidth(),
                             testTag = "submit_add_item"
