@@ -17,14 +17,29 @@ val Sage300 = Color(0xFFB8CEBC)
 val Sage400 = Color(0xFF8FAFA5)
 val Sage500 = Color(0xFF52776B)
 
-// App background tint from HTML
+// App background tint from HTML & Zeni Reference
 val HearthAtmosphereBg = Color(0xFFE3EDE4)
-val HearthCardHolster = Color(0xF2F0F6F0)
-val HearthGlassSurface = Color(0xD8FFFFFF)
-val HearthGlassBorder = Color(0x99FFFFFF)
+val ZeniSageTop = Color(0xFFE1ECE3)
+val ZeniOatMid = Color(0xFFF3F3EC)
+val ZeniSageBottom = Color(0xFFB5C7B9)
+val ZeniOliveDockBg = Color(0xFF7D9485)
+
+// Glassmorphism surfaces & borders
+val HearthCardHolster = Color(0xEBF0F5F0)
+val HearthGlassSurface = Color(0xE0FFFFFF)
+val HearthGlassStrong = Color(0xF5FFFFFF)
+val HearthGlassSubtle = Color(0x99FFFFFF)
+val HearthGlassBorder = Color(0xB8FFFFFF)
+val ZeniSwitcherTrack = Color(0x1C0B2319)
+val ZeniDockSurface = Color(0x47FFFFFF)
+val ZeniDockCircle = Color(0x33FFFFFF)
+val ZeniDockBorder = Color(0x8CFFFFFF)
+val SageChallengeButton = Color(0xFFA7CEB6)
+
+// Typography colors
 val HearthTextDark = Color(0xFF0B2319)
-val HearthTextMuted = Color(0xFF4D6C5E)
-val HearthTextSubtle = Color(0xFF759585)
+val HearthTextMuted = Color(0xFF4A685A)
+val HearthTextSubtle = Color(0xFF6E8E7F)
 
 // Brand colors
 val TealPrimary = Forest800

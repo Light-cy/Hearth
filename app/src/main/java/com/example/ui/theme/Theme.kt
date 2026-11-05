@@ -73,14 +73,6 @@ fun HearthTheme(
 }
 
 @Composable
-fun HisaabTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit
-) {
-    HearthTheme(darkTheme = darkTheme, content = content)
-}
-
-@Composable
 fun MyApplicationTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
