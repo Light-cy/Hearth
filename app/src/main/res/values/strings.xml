@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">HEARTH</string>
+    <string name="app_tagline">Split it. Settle it. Done.</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_shopping">Shopping</string>
+    <string name="nav_money">Money</string>
+    <string name="nav_profile">Profile</string>
+    
+    <string name="status_on_track">On Track</string>
+    <string name="status_near_limit">Near Limit</string>
+    <string name="status_over_budget">Over Budget</string>
+
+    <string name="unit_pack">pack</string>
+    <string name="unit_dozen">dozen</string>
+    <string name="unit_bottle">bottle</string>
+    <string name="unit_bag">bag</string>
+</resources>

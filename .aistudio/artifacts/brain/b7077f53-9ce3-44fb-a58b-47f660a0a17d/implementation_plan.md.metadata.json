@@ -1,0 +1,6 @@
+{
+  "summary": "Implementation and connection plan detailing how the backend runs and how to connect a physical Android mobile phone to the laptop via Local Wi-Fi or USB tethering (adb reverse).",
+  "updatedAt": "2026-11-05T07:23:32.964328637Z",
+  "requestFeedback": true,
+  "userFacing": true
+}
