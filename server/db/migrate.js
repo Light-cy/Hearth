@@ -7,7 +7,7 @@ const db = require('./index');
 async function migrate() {
   const client = await db.getClient();
   try {
-    console.log('--- Running Hisaab Database Migrations ---');
+    console.log('--- Running Hearth Database Migrations ---');
     await client.query('BEGIN');
 
     // Create schema_migrations table if not exists

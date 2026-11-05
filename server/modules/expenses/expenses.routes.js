@@ -135,7 +135,7 @@ router.post('/', requireAuth, idempotency, async (req, res) => {
   }
 });
 
-// POST /api/expenses/recurring/apply (Surprise Option 4)
+// POST /api/expenses/recurring/apply (Recurring Monthly Bills Generator)
 router.post('/recurring/apply', requireAuth, async (req, res) => {
   const currentMonth = new Date().toISOString().slice(0, 7);
   const today = new Date().toISOString().slice(0, 10);

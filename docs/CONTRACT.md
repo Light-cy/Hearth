@@ -1,4 +1,4 @@
-# Hisaab — REST API Contract (Frozen)
+# Hearth — REST API Contract
 
 All money amounts in JSON are represented as numbers with at most 2 decimal places (e.g., `333.34`, `4200.00`).
 Under the hood, all monetary values are stored and calculated strictly in integer paisa (`BIGINT`).
@@ -29,8 +29,8 @@ Error Envelope format for all non-2xx responses:
   ```json
   {
     "name": "Ali",
-    "email": "ali@example.com",
-    "password": "password123",
+    "email": "ali@hearth.pk",
+    "password": "hearth2026",
     "invite_code": "LHR-4B-9872"
   }
   ```
@@ -38,7 +38,7 @@ Error Envelope format for all non-2xx responses:
 - **Response (201 Created)**:
   ```json
   {
-    "user": { "id": "M01", "name": "Ali", "email": "ali@example.com", "role": "admin" },
+    "user": { "id": "M01", "name": "Ali", "email": "ali@hearth.pk", "role": "admin" },
     "access_token": "jwt...",
     "refresh_token": "hex...",
     "expires_in": 900
@@ -48,7 +48,7 @@ Error Envelope format for all non-2xx responses:
 ### `POST /api/auth/login`
 - **Request Body**:
   ```json
-  { "email": "ali@example.com", "password": "password123" }
+  { "email": "ali@hearth.pk", "password": "hearth2026" }
   ```
 - **Response (200 OK)**:
   Same shape as register.
@@ -71,7 +71,7 @@ Error Envelope format for all non-2xx responses:
 ### `GET /api/auth/me`
 - **Response (200 OK)**:
   ```json
-  { "user": { "id": "M01", "name": "Ali", "email": "ali@example.com", "role": "admin" } }
+  { "user": { "id": "M01", "name": "Ali", "email": "ali@hearth.pk", "role": "admin" } }
   ```
 
 ### `POST /api/auth/password`
@@ -84,7 +84,7 @@ Error Envelope format for all non-2xx responses:
 ### `GET /api/household`
 - **Response (200 OK)**:
   ```json
-  { "name": "Roommates Flat 4B, Lahore", "member_count": 3, "invite_code": "LHR-4B-9872" }
+  { "name": "Flat 4B, 3 Gulberg Estate", "member_count": 3, "invite_code": "LHR-4B-9872" }
   ```
 
 ### `POST /api/household/invite/rotate` *(Admin only)*
@@ -204,7 +204,7 @@ Error Envelope format for all non-2xx responses:
   }
   ```
 
-### `GET /api/balances/simplify` *(Surprise Option 1)*
+### `GET /api/balances/simplify` *(Smart Settle Debt Simplification)*
 - **Response (200 OK)**:
   ```json
   [
@@ -226,7 +226,7 @@ Error Envelope format for all non-2xx responses:
   }
   ```
 
-### `GET /api/budget/categories` *(Surprise Option 3)*
+### `GET /api/budget/categories` *(Category Spend Breakdown)*
 - **Response (200 OK)**:
   ```json
   [
@@ -237,7 +237,7 @@ Error Envelope format for all non-2xx responses:
   ]
   ```
 
-### `POST /api/expenses/recurring/apply` *(Surprise Option 4)*
+### `POST /api/expenses/recurring/apply` *(Recurring Monthly Bills Generator)*
 - **Response (200 OK)**:
   ```json
   { "created": 1, "skipped": 0 }

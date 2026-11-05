@@ -45,7 +45,7 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/budget/categories?month=YYYY-MM (Option 3: Category Budget Warnings)
+// GET /api/budget/categories?month=YYYY-MM (Category Budget Breakdown & Warnings)
 router.get('/categories', requireAuth, async (req, res) => {
   try {
     const now = new Date();

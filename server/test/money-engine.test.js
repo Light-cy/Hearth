@@ -12,7 +12,7 @@ const {
   simplify
 } = require('../engine/money');
 
-describe('Hisaab Pure Money Engine & Invariants', () => {
+describe('Hearth Pure Money Engine & Invariants', () => {
 
   test('toPaisa converts valid decimals and throws on invalid inputs', () => {
     assert.strictEqual(toPaisa('333.34'), 33334);

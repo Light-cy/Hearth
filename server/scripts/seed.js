@@ -7,7 +7,7 @@ const { toPaisa } = require('../engine/money');
 async function seed() {
   const client = await db.getClient();
   try {
-    console.log('--- Seeding Hisaab Database ---');
+    console.log('--- Seeding Hearth Database ---');
     await client.query('BEGIN');
 
     // Clean existing tables in reverse dependency order
@@ -30,7 +30,7 @@ async function seed() {
     // 1. Household & Settings
     await client.query(`
       INSERT INTO household (id, name, invite_code)
-      VALUES (1, 'Roommates Flat 4B, Lahore', 'LHR-4B-9872')
+      VALUES (1, 'Flat 4B, 3 Gulberg Estate', 'LHR-4B-9872')
     `);
 
     await client.query(`
@@ -39,11 +39,11 @@ async function seed() {
     `);
 
     // 2. Members (Ali M01 Admin, Ayesha M02, Bilal M03)
-    const passwordHash = await bcrypt.hash('hisaab2026', 10);
+    const passwordHash = await bcrypt.hash('hearth2026', 10);
     const membersData = [
-      { id: 'M01', name: 'Ali', email: 'ali@hisaab.local', role: 'admin' },
-      { id: 'M02', name: 'Ayesha', email: 'ayesha@hisaab.local', role: 'member' },
-      { id: 'M03', name: 'Bilal', email: 'bilal@hisaab.local', role: 'member' }
+      { id: 'M01', name: 'Ali', email: 'ali@hearth.pk', role: 'admin' },
+      { id: 'M02', name: 'Ayesha', email: 'ayesha@hearth.pk', role: 'member' },
+      { id: 'M03', name: 'Bilal', email: 'bilal@hearth.pk', role: 'member' }
     ];
 
     for (const m of membersData) {
@@ -53,14 +53,15 @@ async function seed() {
       );
     }
 
-    // 3. Four Benchmark Expenses (Spend: 4,200.00 / 5,000.00 -> 84% NEAR_LIMIT; Net: Ali +250, Ayesha -450, Bilal +200)
-    // Exp 1: Groceries 1,200.00 paid by Ali
+    // 3. Initial Household Expenses:
+    // Spend: 4,200.00 / 5,000.00 -> 84% NEAR_LIMIT; Net: Ali +250, Ayesha -450, Bilal +200
+    // Exp 1: Grocery Trip (Milk & Rice) — 780.00 paid by Ali (M01), Equal across M01, M02, M03 (260.00 each)
     const exp1Id = 'EXP-0001';
     await client.query(`
       INSERT INTO expenses (id, title, category, amount_paisa, payer_id, split_type, expense_date, source, created_by)
-      VALUES ($1, 'Monthly Groceries & Pantry', 'Groceries', 120000, 'M01', 'CUSTOM', CURRENT_DATE, 'manual', 'M01')
+      VALUES ($1, 'Grocery Trip (Milk & Rice)', 'Groceries', 78000, 'M01', 'EQUAL', CURRENT_DATE, 'checkout', 'M01')
     `, [exp1Id]);
-    const exp1Splits = { M01: 30000, M02: 10000, M03: 80000 };
+    const exp1Splits = { M01: 26000, M02: 26000, M03: 26000 };
     for (const [mId, share] of Object.entries(exp1Splits)) {
       await client.query(
         'INSERT INTO expense_splits (expense_id, member_id, share_paisa) VALUES ($1, $2, $3)',
@@ -68,13 +69,13 @@ async function seed() {
       );
     }
 
-    // Exp 2: Utilities 2,520.00 paid by Bilal
+    // Exp 2: Cleaning Supplies — 900.00 paid by Ayesha (M02), Equal between M01 & M02 (450.00 each)
     const exp2Id = 'EXP-0002';
     await client.query(`
       INSERT INTO expenses (id, title, category, amount_paisa, payer_id, split_type, expense_date, source, created_by)
-      VALUES ($1, 'Electricity & Fiber Internet', 'Utilities', 252000, 'M03', 'CUSTOM', CURRENT_DATE, 'manual', 'M03')
+      VALUES ($1, 'Cleaning Supplies', 'Cleaning', 90000, 'M02', 'EQUAL', CURRENT_DATE, 'manual', 'M02')
     `, [exp2Id]);
-    const exp2Splits = { M01: 100000, M02: 20000, M03: 132000 };
+    const exp2Splits = { M01: 45000, M02: 45000 };
     for (const [mId, share] of Object.entries(exp2Splits)) {
       await client.query(
         'INSERT INTO expense_splits (expense_id, member_id, share_paisa) VALUES ($1, $2, $3)',
@@ -82,13 +83,13 @@ async function seed() {
       );
     }
 
-    // Exp 3: Cleaning Supplies 300.00 paid by Ali
+    // Exp 3: Internet Bill — 1,500.00 paid by Bilal (M03), Custom: Ali 500, Ayesha 300, Bilal 700
     const exp3Id = 'EXP-0003';
     await client.query(`
-      INSERT INTO expenses (id, title, category, amount_paisa, payer_id, split_type, expense_date, source, created_by)
-      VALUES ($1, 'Apartment Cleaning Supplies', 'Cleaning', 30000, 'M01', 'CUSTOM', CURRENT_DATE, 'manual', 'M01')
+      INSERT INTO expenses (id, title, category, amount_paisa, payer_id, split_type, expense_date, source, created_by, is_recurring)
+      VALUES ($1, 'Internet Bill', 'Utilities', 150000, 'M03', 'CUSTOM', CURRENT_DATE, 'manual', 'M03', true)
     `, [exp3Id]);
-    const exp3Splits = { M01: 8000, M02: 7000, M03: 15000 };
+    const exp3Splits = { M01: 50000, M02: 30000, M03: 70000 };
     for (const [mId, share] of Object.entries(exp3Splits)) {
       await client.query(
         'INSERT INTO expense_splits (expense_id, member_id, share_paisa) VALUES ($1, $2, $3)',
@@ -96,13 +97,13 @@ async function seed() {
       );
     }
 
-    // Exp 4: Dining 180.00 paid by Ali
+    // Exp 4: Electricity Bill — 1,020.00 paid by Ali (M01), Equal across M01, M02, M03 (340.00 each)
     const exp4Id = 'EXP-0004';
     await client.query(`
       INSERT INTO expenses (id, title, category, amount_paisa, payer_id, split_type, expense_date, source, created_by)
-      VALUES ($1, 'Weekend Dinner Takeout', 'Dining', 18000, 'M01', 'CUSTOM', CURRENT_DATE, 'manual', 'M01')
+      VALUES ($1, 'Electricity Bill', 'Utilities', 102000, 'M01', 'EQUAL', CURRENT_DATE, 'manual', 'M01')
     `, [exp4Id]);
-    const exp4Splits = { M01: 5000, M02: 8000, M03: 5000 };
+    const exp4Splits = { M01: 34000, M02: 34000, M03: 34000 };
     for (const [mId, share] of Object.entries(exp4Splits)) {
       await client.query(
         'INSERT INTO expense_splits (expense_id, member_id, share_paisa) VALUES ($1, $2, $3)',
@@ -132,8 +133,8 @@ async function seed() {
     `);
 
     await client.query('COMMIT');
-    console.log('✅ Hisaab Database Seeded successfully!');
-    console.log('   Household: Roommates Flat 4B, Lahore (Code: LHR-4B-9872)');
+    console.log('✅ Hearth Database Seeded successfully!');
+    console.log('   Household: Flat 4B, 3 Gulberg Estate (Code: LHR-4B-9872)');
     console.log('   Total Spend: PKR 4,200.00 | Remaining: PKR 800.00 (84% NEAR_LIMIT)');
     console.log('   Net Balances: Ali +250.00 | Ayesha -450.00 | Bilal +200.00 | Sum 0.00');
   } catch (err) {

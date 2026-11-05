@@ -1,4 +1,4 @@
--- 001_initial_schema.sql (Hisaab PostgreSQL Schema - all money in BIGINT paisa)
+-- 001_initial_schema.sql (Hearth PostgreSQL Schema - all money in BIGINT paisa)
 
 CREATE TABLE IF NOT EXISTS household (
     id SERIAL PRIMARY KEY,

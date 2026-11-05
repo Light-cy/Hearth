@@ -1,6 +1,6 @@
 /**
  * verify-benchmark.js
- * Validates the pure arithmetic and invariant properties of the Hisaab benchmark scenario.
+ * Validates the pure arithmetic and invariant properties of the Hearth household ledger engine.
  * Can be run standalone with `node server/scripts/verify-benchmark.js`.
  */
 const {
@@ -21,7 +21,7 @@ function assert(condition, message) {
   }
 }
 
-console.log('--- Verifying Hisaab Hackathon Benchmark Math ---');
+console.log('--- Verifying Hearth Household Ledger Math & Invariants ---');
 
 // 1. Members
 const members = [
@@ -34,29 +34,26 @@ const members = [
 const budgetPaisa = toPaisa(5000);
 assert(budgetPaisa === 500000, `Budget paisa should be 500,000, got ${budgetPaisa}`);
 
-// 3. Four Benchmark Expenses
-// Exp 1: Groceries 1,200.00 paid by Ali
-const exp1Paisa = toPaisa(1200);
-const exp1Shares = { M01: 30000, M02: 10000, M03: 80000 };
-validateCustomSplit(exp1Paisa, exp1Shares);
+// 3. Initial Household Expenses
+// Exp 1: Grocery Trip (Milk & Rice) — 780.00 paid by Ali (M01), Equal across M01, M02, M03 (260.00 each)
+const exp1Paisa = toPaisa(780);
+const exp1Shares = splitEqual(exp1Paisa, ['M01', 'M02', 'M03']);
 const exp1Splits = Object.entries(exp1Shares).map(([mId, share]) => ({ member_id: mId, share_paisa: share }));
 
-// Exp 2: Utilities 2,520.00 paid by Bilal
-const exp2Paisa = toPaisa(2520);
-const exp2Shares = { M01: 100000, M02: 20000, M03: 132000 };
-validateCustomSplit(exp2Paisa, exp2Shares);
+// Exp 2: Cleaning Supplies — 900.00 paid by Ayesha (M02), Equal between M01 & M02 (450.00 each)
+const exp2Paisa = toPaisa(900);
+const exp2Shares = splitEqual(exp2Paisa, ['M01', 'M02']);
 const exp2Splits = Object.entries(exp2Shares).map(([mId, share]) => ({ member_id: mId, share_paisa: share }));
 
-// Exp 3: Cleaning Supplies 300.00 paid by Ali
-const exp3Paisa = toPaisa(300);
-const exp3Shares = { M01: 8000, M02: 7000, M03: 15000 };
+// Exp 3: Internet Bill — 1,500.00 paid by Bilal (M03), Custom: Ali 500, Ayesha 300, Bilal 700
+const exp3Paisa = toPaisa(1500);
+const exp3Shares = { M01: 50000, M02: 30000, M03: 70000 };
 validateCustomSplit(exp3Paisa, exp3Shares);
 const exp3Splits = Object.entries(exp3Shares).map(([mId, share]) => ({ member_id: mId, share_paisa: share }));
 
-// Exp 4: Dining 180.00 paid by Ali
-const exp4Paisa = toPaisa(180);
-const exp4Shares = { M01: 5000, M02: 8000, M03: 5000 };
-validateCustomSplit(exp4Paisa, exp4Shares);
+// Exp 4: Electricity Bill — 1,020.00 paid by Ali (M01), Equal across M01, M02, M03 (340.00 each)
+const exp4Paisa = toPaisa(1020);
+const exp4Shares = splitEqual(exp4Paisa, ['M01', 'M02', 'M03']);
 const exp4Splits = Object.entries(exp4Shares).map(([mId, share]) => ({ member_id: mId, share_paisa: share }));
 
 // Total spend check
@@ -72,20 +69,24 @@ console.log(`✅ Total Spend: PKR ${fromPaisa(totalSpendPaisa)} | Remaining: PKR
 // 4. Balances Check
 const expenses = [
   { id: 'EXP-1', payer_id: 'M01', amount_paisa: exp1Paisa, splits: exp1Splits },
-  { id: 'EXP-2', payer_id: 'M03', amount_paisa: exp2Paisa, splits: exp2Splits },
-  { id: 'EXP-3', payer_id: 'M01', amount_paisa: exp3Paisa, splits: exp3Splits },
+  { id: 'EXP-2', payer_id: 'M02', amount_paisa: exp2Paisa, splits: exp2Splits },
+  { id: 'EXP-3', payer_id: 'M03', amount_paisa: exp3Paisa, splits: exp3Splits },
   { id: 'EXP-4', payer_id: 'M01', amount_paisa: exp4Paisa, splits: exp4Splits }
 ];
 
 const balances = computeBalances(members, expenses, []);
 
-const aliNet = balances.find(b => b.member_id === 'M01').net;
-const ayeshaNet = balances.find(b => b.member_id === 'M02').net;
-const bilalNet = balances.find(b => b.member_id === 'M03').net;
+const aliBal = balances.find(b => b.member_id === 'M01');
+const ayeshaBal = balances.find(b => b.member_id === 'M02');
+const bilalBal = balances.find(b => b.member_id === 'M03');
 
-assert(aliNet === 25000, `Ali net should be +250.00, got ${aliNet}`);
-assert(ayeshaNet === -45000, `Ayesha net should be -450.00, got ${ayeshaNet}`);
-assert(bilalNet === 20000, `Bilal net should be +200.00, got ${bilalNet}`);
+assert(aliBal.paid === 180000 && aliBal.owed === 155000 && aliBal.net === 25000, `Ali should be Paid 1800, Owed 1550, Net +250`);
+assert(ayeshaBal.paid === 90000 && ayeshaBal.owed === 135000 && ayeshaBal.net === -45000, `Ayesha should be Paid 900, Owed 1350, Net -450`);
+assert(bilalBal.paid === 150000 && bilalBal.owed === 130000 && bilalBal.net === 20000, `Bilal should be Paid 1500, Owed 1300, Net +200`);
+
+const aliNet = aliBal.net;
+const ayeshaNet = ayeshaBal.net;
+const bilalNet = bilalBal.net;
 assert(aliNet + ayeshaNet + bilalNet === 0, 'Sum of all net balances MUST strictly equal 0');
 
 console.log(`✅ Net Balances: Ali +${fromPaisa(aliNet)} | Ayesha ${fromPaisa(ayeshaNet)} | Bilal +${fromPaisa(bilalNet)} | Sum = 0.00`);

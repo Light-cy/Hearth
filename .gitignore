@@ -16,3 +16,6 @@
 local.properties
 .env
 debug.keystore
+.stitch/
+*.pdf
+implementation_plan_aistudio.md
