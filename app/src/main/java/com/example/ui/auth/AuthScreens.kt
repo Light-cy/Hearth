@@ -1,49 +1,40 @@
 package com.example.ui.auth
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.GroupAdd
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,474 +43,747 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.R
-import com.example.data.SessionManager
+import com.example.di.AppContainer
+import com.example.engine.MoneyEngine
 import com.example.model.Member
-import com.example.model.Role
+import com.example.ui.components.ErrorBanner
+import com.example.ui.components.GlassPanelCard
+import com.example.ui.components.GlassSegmentedSwitcher
 import com.example.ui.components.LoadingButton
 import com.example.ui.components.MemberAvatar
-import com.example.ui.theme.AmberAccent
-import com.example.ui.theme.Slate100
-import com.example.ui.theme.Slate300
-import com.example.ui.theme.TealPrimary
+import com.example.ui.components.ResponsiveScreenContainer
+import com.example.ui.theme.CreditGreen
+import com.example.ui.theme.CreditGreenLight
+import com.example.ui.theme.DebtRed
+import com.example.ui.theme.Forest700
+import com.example.ui.theme.Forest800
+import com.example.ui.theme.Forest900
+import com.example.ui.theme.HearthCardHolster
+import com.example.ui.theme.HearthGlassBorder
+import com.example.ui.theme.HearthGlassStrong
+import com.example.ui.theme.HearthGlassSurface
+import com.example.ui.theme.HearthTextDark
+import com.example.ui.theme.HearthTextMuted
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 @Composable
 fun WelcomeScreen(
+    appContainer: AppContainer,
     onNavigateToLogin: () -> Unit,
     onNavigateToRegister: () -> Unit,
-    onQuickDemoLogin: (Member) -> Unit,
-    modifier: Modifier = Modifier
+    onSelectResident: (Member) -> Unit
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Spacer(modifier = Modifier.height(30.dp))
+    var selectedTopTab by remember { mutableStateOf("Residence") }
+    val residents by appContainer.sessionManager.registeredMembers.collectAsState()
+    val householdName by appContainer.sessionManager.householdName.collectAsState()
+    val inviteCode by appContainer.sessionManager.inviteCode.collectAsState()
+    val balances by appContainer.repository.getBalances().collectAsState(initial = emptyList())
+    val balanceMap = remember(balances) { balances.associateBy { it.memberId } }
 
-        // Brand Icon / Graphic
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(100.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(TealPrimary)
+    ResponsiveScreenContainer(
+        scrollable = true,
+        bottomSafePadding = 36.dp
+    ) { _ ->
+        // 1. Top Bar: Residence / Vaults Switcher + LAHORE Status Capsule
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.Home,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(54.dp)
+            GlassSegmentedSwitcher(
+                options = listOf("Residence", "Vaults"),
+                selectedOption = selectedTopTab,
+                onSelect = { selectedTopTab = it }
+            )
+
+            Row(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.76f))
+                    .border(1.dp, HearthGlassBorder, CircleShape)
+                    .padding(horizontal = 12.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(CreditGreen)
+                )
+                Text(
+                    text = "LAHORE",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.sp,
+                    color = HearthTextDark
+                )
+            }
+        }
+
+        // 2. Hero Editorial Section
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(Forest800.copy(alpha = 0.12f))
+                    .border(1.dp, Forest800.copy(alpha = 0.25f), CircleShape)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Home,
+                    contentDescription = null,
+                    tint = Forest800,
+                    modifier = Modifier.size(14.dp)
+                )
+                Text(
+                    text = "HEARTH • CO-LIVING VAULT",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.2.sp,
+                    color = Forest800
+                )
+            }
+
+            Text(
+                text = if (selectedTopTab == "Residence") {
+                    "Communal Living,\nZero Friction."
+                } else {
+                    "Deterministic\nPaisa Vaults."
+                },
+                style = MaterialTheme.typography.displayMedium,
+                color = HearthTextDark,
+                fontWeight = FontWeight.ExtraBold,
+                lineHeight = 38.sp
+            )
+
+            Text(
+                text = "Split it. Settle it. Done.",
+                style = MaterialTheme.typography.titleMedium,
+                color = Forest800,
+                fontWeight = FontWeight.ExtraBold
+            )
+
+            Text(
+                text = "Shared household ledger, real-time grocery provision sync, and zero-sum paisa settlement built for modern co-living.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = HearthTextMuted
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Text(
-            text = "HEARTH",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.ExtraBold,
-            color = TealPrimary,
-            letterSpacing = 1.sp
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        // PDF Verbatim Tagline
-        Text(
-            text = "Split it. Settle it. Done.",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = "Shared household expense tracker and debt settlement for roommates in Lahore. 100% integer paisa precision.",
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-
-        Spacer(modifier = Modifier.height(36.dp))
-
-        Button(
-            onClick = onNavigateToLogin,
-            shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = TealPrimary),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp)
-                .testTag("welcome_login_button")
-        ) {
-            Text("Sign In", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedButton(
-            onClick = onNavigateToRegister,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp)
-                .testTag("welcome_register_button")
-        ) {
-            Text("Create Account / Join Household", fontSize = 16.sp, color = TealPrimary)
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Fast Demo Roommate Login Buttons for Oral Defense & Testing
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Slate100),
+        // 3. Verified Household Glass Card
+        GlassPanelCard(
+            cornerRadius = 26.dp,
+            containerColor = HearthGlassStrong,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "FAST DEMO LOGIN (EVALUATION)",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    letterSpacing = 1.sp
-                )
-                Spacer(modifier = Modifier.height(10.dp))
+            Column(modifier = Modifier.padding(18.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "VERIFIED HOUSEHOLD",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 1.2.sp,
+                            color = HearthTextMuted
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = householdName,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = HearthTextDark
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.VerifiedUser,
+                        contentDescription = "Verified",
+                        tint = Forest800,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                HorizontalDivider(color = HearthGlassBorder)
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SessionManager.DEFAULT_MEMBERS.forEach { member ->
-                        Button(
-                            onClick = { onQuickDemoLogin(member) },
-                            shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (member.role == Role.ADMIN) AmberAccent else TealPrimary
-                            ),
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy((-8).dp)) {
+                            residents.forEach { m ->
+                                MemberAvatar(name = m.name, memberId = m.id, size = 28.dp)
+                            }
+                        }
+                        Text(
+                            text = "${residents.size} Active Co-Residents",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = HearthTextDark
+                        )
+                    }
+                    Text(
+                        text = "Vault #$inviteCode",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace,
+                        color = Forest800
+                    )
+                }
+            }
+        }
+
+        // 4. Primary & Secondary Action Pills
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Button(
+                onClick = onNavigateToLogin,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp)
+                    .testTag("welcome_login_button"),
+                shape = CircleShape,
+                colors = ButtonDefaults.buttonColors(containerColor = Forest900)
+            ) {
+                Text(
+                    text = "Sign In to Household",
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 15.sp,
+                    color = Color.White
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.85f))
+                    .border(1.dp, HearthGlassBorder, CircleShape)
+                    .clickable(onClick = onNavigateToRegister)
+                    .testTag("welcome_register_button"),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Create Account / Join Household",
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 14.sp,
+                    color = Forest800
+                )
+            }
+        }
+
+        // 5. Verified Resident Vault Profiles Glass Panel
+        GlassPanelCard(
+            cornerRadius = 26.dp,
+            containerColor = HearthGlassSurface,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(18.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "RESIDENT VAULT PROFILES",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 1.1.sp,
+                            color = Forest800
+                        )
+                        Text(
+                            text = "Select your verified profile for 1-tap household access",
+                            fontSize = 11.sp,
+                            color = HearthTextMuted
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(CreditGreenLight)
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "VERIFIED",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = CreditGreen
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    residents.forEach { member ->
+                        val netPaisa = balanceMap[member.id]?.netPaisa ?: 0L
+                        val statusText = when {
+                            netPaisa > 0L -> "+${MoneyEngine.formatPkr(netPaisa)} Net Surplus"
+                            netPaisa < 0L -> "-${MoneyEngine.formatPkr(abs(netPaisa))} Due Settling"
+                            else -> "All Settled Up (PKR 0.00)"
+                        }
+                        val statusColor = when {
+                            netPaisa < 0L -> DebtRed
+                            netPaisa > 0L -> CreditGreen
+                            else -> HearthTextMuted
+                        }
+
+                        Row(
                             modifier = Modifier
-                                .weight(1f)
-                                .height(44.dp)
-                                .testTag("demo_login_${member.id.lowercase()}")
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(Color.White.copy(alpha = 0.88f))
+                                .border(1.dp, HearthGlassBorder, RoundedCornerShape(18.dp))
+                                .clickable { onSelectResident(member) }
+                                .padding(horizontal = 14.dp, vertical = 12.dp)
+                                .testTag("demo_login_${member.id.lowercase()}"),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = member.name,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                MemberAvatar(name = member.name, memberId = member.id, size = 38.dp)
+                                Column {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = member.name,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 14.sp,
+                                            color = HearthTextDark
+                                        )
+                                        Text(
+                                            text = "• ${member.id}",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = HearthTextMuted
+                                        )
+                                    }
+                                    Text(
+                                        text = statusText,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Monospace,
+                                        color = statusColor
+                                    )
+                                }
+                            }
+
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = "Enter as ${member.name}",
+                                tint = Forest800
                             )
                         }
                     }
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(20.dp))
     }
 }
 
 @Composable
 fun LoginScreen(
+    appContainer: AppContainer,
     onLoginSuccess: (Member) -> Unit,
     onNavigateToRegister: () -> Unit,
     onBackToWelcome: () -> Unit,
-    snackbarHostState: SnackbarHostState,
-    modifier: Modifier = Modifier
+    snackbarHostState: SnackbarHostState
 ) {
-    val coroutineScope = rememberCoroutineScope()
-    val focusManager = LocalFocusManager.current
-
-    var email by remember { mutableStateOf("ali@example.com") }
-    var password by remember { mutableStateOf("hisaab2026") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
+    var email by remember { mutableStateOf("ali@hearth.pk") }
+    var password by remember { mutableStateOf("hearth2026") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "Welcome Back",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.ExtraBold,
-            color = TealPrimary
-        )
-
-        Text(
-            text = "Sign in to manage your household expenses with HEARTH",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(28.dp))
-
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it; errorMessage = null },
-            label = { Text("Email address") },
-            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = TealPrimary) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
-            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("login_email_input")
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it; errorMessage = null },
-            label = { Text("Password") },
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = TealPrimary) },
-            trailingIcon = {
-                IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Icon(
-                        imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = if (passwordVisible) "Hide password" else "Show password"
-                    )
-                }
-            },
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("login_password_input")
-        )
-
-        if (errorMessage != null) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        LoadingButton(
-            text = "Sign In",
-            onClick = {
-                if (email.isBlank() || password.isBlank()) {
-                    errorMessage = "Please enter both email and password"
-                    return@LoadingButton
-                }
-                isLoading = true
-                coroutineScope.launch {
-                    val matchedMember = SessionManager.DEFAULT_MEMBERS.find {
-                        it.email.equals(email.trim(), ignoreCase = true)
-                    } ?: Member("M01", "Ali", email.trim(), Role.ADMIN)
-
-                    isLoading = false
-                    onLoginSuccess(matchedMember)
-                }
-            },
-            isLoading = isLoading,
-            modifier = Modifier.fillMaxWidth(),
-            testTag = "submit_login_button"
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
+    ResponsiveScreenContainer(
+        scrollable = true,
+        bottomSafePadding = 36.dp
+    ) { _ ->
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text("Don't have an account?", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TextButton(onClick = onNavigateToRegister) {
-                Text("Join or Create", color = TealPrimary, fontWeight = FontWeight.Bold)
+            IconButton(
+                onClick = onBackToWelcome,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.8f))
+                    .border(1.dp, HearthGlassBorder, CircleShape)
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = HearthTextDark)
+            }
+            Column {
+                Text(
+                    text = "RESIDENT AUTHENTICATION",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.2.sp,
+                    color = Forest700
+                )
+                Text(
+                    text = "Sign In to Hearth",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = HearthTextDark
+                )
             }
         }
 
-        TextButton(onClick = onBackToWelcome) {
-            Text("Back to Welcome", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (errorMessage != null) {
+            ErrorBanner(message = errorMessage!!)
+        }
+
+        GlassPanelCard(
+            cornerRadius = 28.dp,
+            containerColor = HearthGlassStrong,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(22.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = Forest800,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "Enter your registered email & password",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = HearthTextMuted,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = {
+                        email = it
+                        errorMessage = null
+                    },
+                    label = { Text("Email Address") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("login_email_input")
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = {
+                        password = it
+                        errorMessage = null
+                    },
+                    label = { Text("Password") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("login_password_input")
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(HearthCardHolster)
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        text = "Registered Household Emails: ali@hearth.pk, ayesha@hearth.pk, bilal@hearth.pk",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = HearthTextDark,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                LoadingButton(
+                    text = "Sign In",
+                    onClick = {
+                        if (email.isBlank() || password.isBlank()) {
+                            errorMessage = "Please enter your email and password"
+                            return@LoadingButton
+                        }
+                        isLoading = true
+                        coroutineScope.launch {
+                            val result = appContainer.authenticate(email, password)
+                            isLoading = false
+                            result.fold(
+                                onSuccess = { member ->
+                                    snackbarHostState.showSnackbar("Signed in as ${member.name}")
+                                    onLoginSuccess(member)
+                                },
+                                onFailure = { err ->
+                                    errorMessage = err.message ?: "Authentication failed"
+                                }
+                            )
+                        }
+                    },
+                    isLoading = isLoading,
+                    modifier = Modifier.fillMaxWidth(),
+                    testTag = "submit_login_button"
+                )
+            }
+        }
+
+        TextButton(
+            onClick = onNavigateToRegister,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Text(
+                text = "Don't have an account? Create one",
+                color = Forest800,
+                fontWeight = FontWeight.ExtraBold
+            )
         }
     }
 }
 
 @Composable
 fun RegisterScreen(
+    appContainer: AppContainer,
     onRegisterSuccess: (Member) -> Unit,
     onNavigateToLogin: () -> Unit,
     onBackToWelcome: () -> Unit,
-    snackbarHostState: SnackbarHostState,
-    modifier: Modifier = Modifier
+    snackbarHostState: SnackbarHostState
 ) {
-    val coroutineScope = rememberCoroutineScope()
+    val activeInviteCode by appContainer.sessionManager.inviteCode.collectAsState()
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var inviteCode by remember { mutableStateOf("") }
+    var inviteCode by remember(activeInviteCode) { mutableStateOf(activeInviteCode) }
     var isCreatingHousehold by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "Join Household",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.ExtraBold,
-            color = TealPrimary
-        )
-
-        Text(
-            text = "Enter invite code or start a new household",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Mode switch tabs: Join with code vs Create household
+    ResponsiveScreenContainer(
+        scrollable = true,
+        bottomSafePadding = 36.dp
+    ) { _ ->
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Button(
-                onClick = { isCreatingHousehold = false },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (!isCreatingHousehold) TealPrimary else MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = if (!isCreatingHousehold) Color.White else MaterialTheme.colorScheme.onSurface
-                ),
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Join Household", fontSize = 13.sp)
-            }
-
-            Button(
-                onClick = { isCreatingHousehold = true },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isCreatingHousehold) TealPrimary else MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = if (isCreatingHousehold) Color.White else MaterialTheme.colorScheme.onSurface
-                ),
-                shape = RoundedCornerShape(10.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Create New", fontSize = 13.sp)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it; errorMessage = null },
-            label = { Text("Your full name") },
-            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = TealPrimary) },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("register_name_input")
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it; errorMessage = null },
-            label = { Text("Email address") },
-            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = TealPrimary) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("register_email_input")
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it; errorMessage = null },
-            label = { Text("Password (at least 8 chars)") },
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = TealPrimary) },
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("register_password_input")
-        )
-
-        if (!isCreatingHousehold) {
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
-                value = inviteCode,
-                onValueChange = { inviteCode = it; errorMessage = null },
-                label = { Text("Household Invite Code (e.g. LHR-4B-9872)") },
-                leadingIcon = { Icon(Icons.Default.GroupAdd, contentDescription = null, tint = TealPrimary) },
-                singleLine = true,
+            IconButton(
+                onClick = onBackToWelcome,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("register_invite_code_input")
-            )
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.8f))
+                    .border(1.dp, HearthGlassBorder, CircleShape)
+            ) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = HearthTextDark)
+            }
+            Column {
+                Text(
+                    text = "NEW CO-RESIDENT ONBOARDING",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.2.sp,
+                    color = Forest700
+                )
+                Text(
+                    text = "Join Shared Household",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = HearthTextDark
+                )
+            }
         }
 
         if (errorMessage != null) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = errorMessage!!, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+            ErrorBanner(message = errorMessage!!)
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
-
-        LoadingButton(
-            text = if (isCreatingHousehold) "Create Household (Admin M01)" else "Join Household",
-            onClick = {
-                if (name.isBlank() || email.isBlank() || password.length < 8) {
-                    errorMessage = "Please enter valid name, email, and password (min 8 chars)"
-                    return@LoadingButton
-                }
-                if (!isCreatingHousehold && inviteCode.isBlank()) {
-                    errorMessage = "Please enter the household invite code"
-                    return@LoadingButton
-                }
-
-                isLoading = true
-                coroutineScope.launch {
-                    val role = if (isCreatingHousehold) Role.ADMIN else Role.MEMBER
-                    val newMember = Member(
-                        id = if (isCreatingHousehold) "M01" else "M04",
-                        name = name.trim(),
-                        email = email.trim(),
-                        role = role
-                    )
-                    isLoading = false
-                    onRegisterSuccess(newMember)
-                }
-            },
-            isLoading = isLoading,
-            modifier = Modifier.fillMaxWidth(),
-            testTag = "submit_register_button"
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+        GlassPanelCard(
+            cornerRadius = 28.dp,
+            containerColor = HearthGlassStrong,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Already in a household?", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TextButton(onClick = onNavigateToLogin) {
-                Text("Sign In", color = TealPrimary, fontWeight = FontWeight.Bold)
+            Column(modifier = Modifier.padding(22.dp)) {
+                Text(
+                    text = "Register your profile and link to your shared apartment vault.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = HearthTextMuted,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = {
+                        name = it
+                        errorMessage = null
+                    },
+                    label = { Text("Full Name (e.g., Zainab)") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("register_name_input")
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = {
+                        email = it
+                        errorMessage = null
+                    },
+                    label = { Text("Email Address") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("register_email_input")
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = {
+                        password = it
+                        errorMessage = null
+                    },
+                    label = { Text("Password (min 8 chars)") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("register_password_input")
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Create a brand new household?",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = HearthTextDark
+                    )
+                    Switch(
+                        checked = isCreatingHousehold,
+                        onCheckedChange = { isCreatingHousehold = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Forest800
+                        )
+                    )
+                }
+
+                if (!isCreatingHousehold) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = inviteCode,
+                        onValueChange = {
+                            inviteCode = it
+                            errorMessage = null
+                        },
+                        label = { Text("Household Invite Code") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("register_invite_code_input")
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                LoadingButton(
+                    text = "Create Account & Join",
+                    onClick = {
+                        isLoading = true
+                        coroutineScope.launch {
+                            val result = appContainer.register(
+                                name = name,
+                                email = email,
+                                password = password,
+                                inviteCode = inviteCode,
+                                isCreatingHousehold = isCreatingHousehold
+                            )
+                            isLoading = false
+                            result.fold(
+                                onSuccess = { newMember ->
+                                    snackbarHostState.showSnackbar("Welcome to Hearth, ${newMember.name}!")
+                                    onRegisterSuccess(newMember)
+                                },
+                                onFailure = { err ->
+                                    errorMessage = err.message ?: "Registration failed"
+                                }
+                            )
+                        }
+                    },
+                    isLoading = isLoading,
+                    modifier = Modifier.fillMaxWidth(),
+                    testTag = "submit_register_button"
+                )
             }
         }
 
-        TextButton(onClick = onBackToWelcome) {
-            Text("Back to Welcome", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        TextButton(
+            onClick = onNavigateToLogin,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Text(
+                text = "Already in a household? Sign In",
+                color = Forest800,
+                fontWeight = FontWeight.ExtraBold
+            )
         }
     }
 }
